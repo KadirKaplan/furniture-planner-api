@@ -1,5 +1,5 @@
 const Category = require("../models/Category");
-const ApiResponse = require("../utils/ApiResponse");
+const ApiResponse = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 exports.getCategories = asyncHandler(async (req, res) => {

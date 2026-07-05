@@ -1,5 +1,5 @@
 const Material = require("../models/Material");
-const ApiResponse = require("../utils/ApiResponse");
+const ApiResponse = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 
