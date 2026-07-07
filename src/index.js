@@ -10,7 +10,7 @@ const connectDB = require("./config/db");
 const categoryRoutes = require("./routes/categories");
 const productRoutes = require("./routes/products");
 const materialRoutes = require("./routes/materials");
-//const moduleRoutes = require("./routes/modules");
+const moduleRoutes = require("./routes/modules");
 //const projectRoutes = require("./routes/projects");
 const pricingRoutes = require("./routes/pricing");
 const app = express();
@@ -51,7 +51,7 @@ app.use("/api/products", productRoutes);
 
 app.use("/api/materials", materialRoutes);
 
-// app.use("/api/modules", moduleRoutes);
+app.use("/api/modules", moduleRoutes);
 
 // app.use("/api/projects", projectRoutes);
 
