@@ -8,14 +8,15 @@ const {
   updateModule,
   deleteModule,
 } = require("../controllers/moduleController");
+const { protect, authorize } = require("../middleware/auth");
 
 router.route("/")
   .get(getModules)
-  .post(createModule);
+  .post(protect, authorize("admin"), createModule);
 
 router.route("/:id")
   .get(getModule)
-  .put(updateModule)
-  .delete(deleteModule);
+  .put(protect, authorize("admin"), updateModule)
+  .delete(protect, authorize("admin"), deleteModule);
 
 module.exports = router;
