@@ -19,7 +19,11 @@ exports.protect = asyncHandler(async (req, res, next) => {
   let decoded;
 
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
+    decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+      issuer: "furniture-planner-api",
+      audience: "furniture-planner-cms",
+    });
   } catch (error) {
     return ApiResponse.error(res, "Geçersiz veya süresi dolmuş token", 401);
   }

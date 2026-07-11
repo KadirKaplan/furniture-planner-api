@@ -18,9 +18,11 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({ success: false, error: "Geçersiz ID formatı" });
   }
 
+  // Kategorize edilmemiş/beklenmeyen hatalar: ayrıntılar sadece sunucu logunda
+  // kalır (yukarıdaki console.error), client'a iç yapıyı sızdırmayan sabit mesaj döner.
   res.status(err.status || 500).json({
     success: false,
-    error: err.message || "Sunucu hatası",
+    error: "Sunucu hatası",
   });
 };
 

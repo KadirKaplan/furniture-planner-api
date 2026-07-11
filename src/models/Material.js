@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const applyIdTransform = require("../utils/idTransform");
 
 const colorSchema = new mongoose.Schema({
   name: String,
@@ -54,6 +55,9 @@ const materialSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+applyIdTransform(colorSchema);
+applyIdTransform(materialSchema);
 
 module.exports = mongoose.model(
   "Material",

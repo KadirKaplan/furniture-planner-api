@@ -6,6 +6,8 @@ const asyncHandler = require("../middleware/asyncHandler");
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || "7d",
+    issuer: "furniture-planner-api",
+    audience: "furniture-planner-cms",
   });
 };
 

@@ -333,6 +333,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -365,6 +367,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -395,6 +399,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -425,6 +431,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -457,6 +465,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -489,6 +499,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -521,6 +533,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
 
       {
@@ -553,6 +567,8 @@ const seed = async () => {
           matBySlug["mdf-lam"],
           matBySlug["mdf-lake"],
         ],
+
+        isActive: true,
       },
     ]);
 

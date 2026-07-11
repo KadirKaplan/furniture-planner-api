@@ -3,8 +3,12 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
 
 const connectDB = require("./config/db");
+const { globalLimiter } = require("./middleware/rateLimiters");
+const errorHandler = require("./middleware/errorHandler");
 
 // Routes
 const authRoutes = require("./routes/auth");
@@ -20,7 +24,26 @@ const app = express();
 connectDB();
 
 // Middlewares
-app.use(cors());
+app.use(helmet());
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Origin header'ı olmayan istekler (curl/Postman/server-to-server) burada
+      // engellenmiyor — CORS sadece tarayıcı kaynaklı istekleri kısıtlar, bu
+      // yüzden asıl erişim kontrolü requireClientOrAuth middleware'inde yapılır.
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS: Bu origin'e izin verilmiyor"));
+    },
+  })
+);
 
 app.use(
   express.json({
@@ -34,7 +57,11 @@ app.use(
   })
 );
 
+app.use(mongoSanitize());
+
 app.use(morgan("dev"));
+
+app.use(globalLimiter);
 
 // Health Check
 app.get("/", (req, res) => {
@@ -69,14 +96,7 @@ app.use("*", (req, res) => {
 });
 
 // Error Handler
-app.use((err, req, res, next) => {
-  console.error(err);
-
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Server Error",
-  });
-});
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 

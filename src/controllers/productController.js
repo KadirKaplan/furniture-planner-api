@@ -9,6 +9,10 @@ exports.getProducts = asyncHandler(
   async (req, res) => {
     const query = {};
 
+    if (req.query.all !== "true") {
+      query.isActive = true;
+    }
+
     if (req.query.category) {
       const category =
         await Category.findOne({

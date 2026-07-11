@@ -8,14 +8,21 @@ const {
   updateMaterial,
   deleteMaterial,
 } = require("../controllers/materialController");
+const { protect, authorize } = require("../middleware/auth");
+const { requireClientOrAuth } = require("../middleware/publicAccess");
+const validate = require("../middleware/validate");
+const {
+  materialCreateSchema,
+  materialUpdateSchema,
+} = require("../validators/materialValidator");
 
 router.route("/")
-  .get(getMaterials)
-  //.post(createMaterial);
+  .get(requireClientOrAuth, getMaterials)
+  .post(protect, authorize("admin"), validate(materialCreateSchema), createMaterial);
 
-// router.route("/:id")
-//   .get(getMaterial)
-//   .put(updateMaterial)
-//   .delete(deleteMaterial);
+router.route("/:id")
+  .get(requireClientOrAuth, getMaterial)
+  .put(protect, authorize("admin"), validate(materialUpdateSchema), updateMaterial)
+  .delete(protect, authorize("admin"), deleteMaterial);
 
 module.exports = router;

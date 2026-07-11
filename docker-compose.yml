@@ -6,17 +6,25 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - MONGODB_URI=mongodb://mongo:27017/furniture_configurator
+      - MONGODB_URI=mongodb://root:${MONGO_ROOT_PASSWORD}@mongo:27017/furniture_configurator?authSource=admin
       - PORT=3001
       - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRE=${JWT_EXPIRE}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - PLANNER_CLIENT_KEY=${PLANNER_CLIENT_KEY}
     depends_on:
       - mongo
     restart: unless-stopped
 
   mongo:
     image: mongo:7
-    ports:
-      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+    # Portu host'a açmıyoruz; sadece Docker network'ü içindeki 'api' servisi erişebilir.
+    expose:
+      - "27017"
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped

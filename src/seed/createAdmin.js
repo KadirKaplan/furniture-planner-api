@@ -20,10 +20,13 @@ const createAdmin = async () => {
   try {
     await connectDB();
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const existing = await User.findOne({ email: email.toLowerCase() }).select("+password");
 
     if (existing) {
-      console.log(`ℹ️  ${email} zaten kayıtlı, işlem atlandı`);
+      // .env'deki ADMIN_PASSWORD değiştiyse (rotasyon), mevcut admin'in şifresini de günceller.
+      existing.password = password;
+      await existing.save();
+      console.log(`✅ ${email} için admin şifresi güncellendi (rotasyon)`);
       process.exit(0);
     }
 

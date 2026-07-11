@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const applyIdTransform = require("../utils/idTransform");
 
 const productSchema = new mongoose.Schema(
   {
@@ -42,11 +43,20 @@ const productSchema = new mongoose.Schema(
         ref: "Material",
       },
     ],
+
+    availableColors: [String],
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+applyIdTransform(productSchema);
 
 module.exports = mongoose.model(
   "Product",

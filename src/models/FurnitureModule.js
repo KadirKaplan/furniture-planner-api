@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const applyIdTransform = require("../utils/idTransform");
 
 const moduleSchema = new mongoose.Schema(
   {
@@ -22,6 +23,8 @@ const moduleSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+applyIdTransform(moduleSchema);
 
 module.exports = mongoose.model(
   "FurnitureModule",
