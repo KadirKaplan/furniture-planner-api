@@ -22,7 +22,12 @@ const uploadRoutes = require("./routes/upload");
 const app = express();
 
 // Mongo Connection
-connectDB();
+// Not: process burada kasıtlı olarak çökertilmiyor — bağlantı başarısız
+// olursa mongoose'un command buffering'i sayesinde istekler zaman aşımına
+// uğrayıp 500 döner, ama serverless function'ın kendisi ayakta kalır.
+connectDB().catch((error) => {
+  console.error("❌ MongoDB ilk bağlantı denemesi başarısız:", error.message);
+});
 
 // Middlewares
 app.use(helmet());
