@@ -1,6 +1,23 @@
 const errorHandler = (err, req, res, next) => {
   console.error(err.stack);
 
+  // Multer dosya yükleme hataları (boyut sınırı vb.)
+  if (err.name === "MulterError") {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        success: false,
+        error: "Dosya boyutu izin verilen sınırı aşıyor",
+      });
+    }
+    return res.status(400).json({ success: false, error: "Dosya yükleme hatası" });
+  }
+
+  // Upload middleware/controller'da bilinçli olarak fırlatılan, kullanıcıya
+  // gösterilmesi güvenli mesajlar (örn. desteklenmeyen dosya formatı)
+  if (err.isUploadError) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+
   // Mongoose validation error
   if (err.name === "ValidationError") {
     const messages = Object.values(err.errors).map((e) => e.message);

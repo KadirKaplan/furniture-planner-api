@@ -14,6 +14,10 @@ const productSchema = new mongoose.Schema(
 
     description: String,
 
+    icon: String,
+
+    modelUrl: String,
+
     parametric: {
       type: Boolean,
       default: true,

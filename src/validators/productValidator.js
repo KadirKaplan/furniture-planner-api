@@ -6,6 +6,8 @@ const productCreateSchema = z.object({
   slug: z.string().min(1),
   category: objectId,
   description: z.string().optional(),
+  icon: z.string().min(1, "İkon zorunludur"),
+  modelUrl: z.string().min(1, "3D model zorunludur"),
   parametric: z.boolean().optional(),
   basePrice: z.number().min(0).optional(),
   defaultWidth: z.number().positive("defaultWidth 0'dan büyük olmalıdır"),

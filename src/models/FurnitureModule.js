@@ -9,6 +9,16 @@ const moduleSchema = new mongoose.Schema(
 
     description: String,
 
+    icon: String,
+
+    modelUrl: String,
+
+    type: {
+      type: String,
+      enum: ["generic", "door"],
+      default: "generic",
+    },
+
     priceModifier: {
       type: Number,
       default: 0,

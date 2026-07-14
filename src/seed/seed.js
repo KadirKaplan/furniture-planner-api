@@ -291,6 +291,13 @@ const seed = async () => {
         description: "Kapak aynası",
         priceModifier: 900,
       },
+
+      {
+        name: "Yatak",
+        slug: "mattress",
+        description: "Karyola iç ölçüsünden otomatik hesaplanan yatak boyutu",
+        priceModifier: 0,
+      },
     ]);
 
     console.log(
