@@ -12,6 +12,7 @@ const errorHandler = require("./middleware/errorHandler");
 
 // Routes
 const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/users");
 const categoryRoutes = require("./routes/categories");
 const productRoutes = require("./routes/products");
 const materialRoutes = require("./routes/materials");
@@ -75,6 +76,8 @@ app.get("/", (req, res) => {
 
 // API Routes
 app.use("/api/auth", authRoutes);
+
+app.use("/api/users", userRoutes);
 
 app.use("/api/categories", categoryRoutes);
 

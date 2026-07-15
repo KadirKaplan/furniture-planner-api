@@ -16,10 +16,6 @@ const categorySchema = new mongoose.Schema(
 
     description: String,
 
-    icon: String,
-
-    modelUrl: String,
-
     order: {
       type: Number,
       default: 0,

@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const Material = require("../models/Material");
+const FurnitureModule = require("../models/FurnitureModule");
 const ApiResponse = require("../utils/apiResponse");
 
 /**
@@ -14,9 +15,12 @@ const ApiResponse = require("../utils/apiResponse");
  *    uygulanmaz (aksi halde aynı boyut hem alanda hem surcharge'da sayılırdı).
  * 3. Malzeme ve renk modifier'ları yüzde artış olarak uygulanır
  *    finalPrice = alanFiyatı × depthMultiplier × (1 + matMod/100) × (1 + colorMod/100)
+ *                 + modüllerToplamı
+ * 4. Modüller (çekmece/kapak/raf vb.) sabit birim fiyatlıdır — alan/derinlik/malzeme
+ *    çarpanlarından etkilenmez, her biri kendi priceModifier'ı × adet kadar toplama eklenir.
  */
 const calculatePrice = async (req, res) => {
-  const { productId, width, height, depth, materialId, colorId } = req.body;
+  const { productId, width, height, depth, materialId, colorId, modules } = req.body;
 
   if (!productId || !width || !height || !depth) {
     return ApiResponse.error(
@@ -35,9 +39,9 @@ const calculatePrice = async (req, res) => {
 
   // Boyut sınır kontrolü
   const checks = [
-    [width, product.minWidth, product.maxWidth, "Genişlik"],
-    [height, product.minHeight, product.maxHeight, "Yükseklik"],
-    [depth, product.minDepth, product.maxDepth, "Derinlik"],
+    [width, product.dimensions?.minWidth, product.dimensions?.maxWidth, "Genişlik"],
+    [height, product.dimensions?.minHeight, product.dimensions?.maxHeight, "Yükseklik"],
+    [depth, product.dimensions?.minDepth, product.dimensions?.maxDepth, "Derinlik"],
   ];
 
   for (const [val, min, max, label] of checks) {
@@ -114,8 +118,50 @@ const calculatePrice = async (req, res) => {
     }
   }
 
+  // Modüller (çekmece vb.): { moduleId, quantity }[] — her modül kendi priceModifier'ı
+  // × adet kadar toplama sabit bir ek ücret olarak eklenir (alan/malzeme çarpanlarından
+  // etkilenmez), böylece her çekmece eklendiğinde fiyat o çekmece modülünün birim
+  // fiyatı kadar artar.
+  let modulesTotal = 0;
+  const appliedModules = [];
+
+  if (modules !== undefined) {
+    if (!Array.isArray(modules)) {
+      return ApiResponse.error(res, "modules bir dizi olmalıdır", 400);
+    }
+
+    const moduleIds = modules.map((m) => m?.moduleId).filter(Boolean);
+    const foundModules = await FurnitureModule.find({
+      _id: { $in: moduleIds },
+      isActive: true,
+    });
+    const moduleById = new Map(foundModules.map((m) => [m._id.toString(), m]));
+
+    for (const entry of modules) {
+      const quantity = Number(entry?.quantity) || 0;
+      if (quantity <= 0) continue;
+
+      const mod = moduleById.get(String(entry?.moduleId));
+      if (!mod) {
+        return ApiResponse.error(res, "Geçersiz modül", 400);
+      }
+
+      const lineTotal = mod.priceModifier * quantity;
+      modulesTotal += lineTotal;
+      appliedModules.push({
+        id: mod._id,
+        name: mod.name,
+        slug: mod.slug,
+        quantity,
+        unitPrice: mod.priceModifier,
+        lineTotal,
+      });
+    }
+  }
+
   const finalPrice =
-    price * (1 + materialModifier / 100) * (1 + colorModifier / 100);
+    price * (1 + materialModifier / 100) * (1 + colorModifier / 100) +
+    modulesTotal;
 
   return ApiResponse.success(res, {
     product: { id: product._id, name: product.name },
@@ -132,6 +178,8 @@ const calculatePrice = async (req, res) => {
     dimensionPrice: Math.round(price * 100) / 100,
     material: appliedMaterial,
     color: appliedColor,
+    modules: appliedModules,
+    modulesTotal: Math.round(modulesTotal * 100) / 100,
     finalPrice: Math.round(finalPrice * 100) / 100,
     currency: "TRY",
   });

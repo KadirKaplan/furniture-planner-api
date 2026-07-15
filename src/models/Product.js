@@ -5,7 +5,11 @@ const productSchema = new mongoose.Schema(
   {
     name: String,
 
-    slug: String,
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
 
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -14,9 +18,10 @@ const productSchema = new mongoose.Schema(
 
     description: String,
 
-    icon: String,
-
-    modelUrl: String,
+    assets: {
+      icon: String,
+      modelUrl: String,
+    },
 
     parametric: {
       type: Boolean,
@@ -28,18 +33,20 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
-    defaultWidth: Number,
-    defaultHeight: Number,
-    defaultDepth: Number,
+    dimensions: {
+      defaultWidth: Number,
+      defaultHeight: Number,
+      defaultDepth: Number,
 
-    minWidth: Number,
-    maxWidth: Number,
+      minWidth: Number,
+      maxWidth: Number,
 
-    minHeight: Number,
-    maxHeight: Number,
+      minHeight: Number,
+      maxHeight: Number,
 
-    minDepth: Number,
-    maxDepth: Number,
+      minDepth: Number,
+      maxDepth: Number,
+    },
 
     allowedMaterials: [
       {

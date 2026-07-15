@@ -1,15 +1,7 @@
 const { z } = require("zod");
 const { objectId } = require("./common");
 
-const productCreateSchema = z.object({
-  name: z.string().min(1),
-  slug: z.string().min(1),
-  category: objectId,
-  description: z.string().optional(),
-  icon: z.string().min(1, "İkon zorunludur"),
-  modelUrl: z.string().min(1, "3D model zorunludur"),
-  parametric: z.boolean().optional(),
-  basePrice: z.number().min(0).optional(),
+const dimensionsSchema = z.object({
   defaultWidth: z.number().positive("defaultWidth 0'dan büyük olmalıdır"),
   defaultHeight: z.number().positive("defaultHeight 0'dan büyük olmalıdır"),
   defaultDepth: z.number().positive("defaultDepth 0'dan büyük olmalıdır"),
@@ -19,6 +11,22 @@ const productCreateSchema = z.object({
   maxHeight: z.number().positive("maxHeight 0'dan büyük olmalıdır"),
   minDepth: z.number().positive("minDepth 0'dan büyük olmalıdır"),
   maxDepth: z.number().positive("maxDepth 0'dan büyük olmalıdır"),
+});
+
+const assetsSchema = z.object({
+  icon: z.string().min(1, "İkon zorunludur"),
+  modelUrl: z.string().min(1, "3D model zorunludur"),
+});
+
+const productCreateSchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1),
+  category: objectId,
+  description: z.string().optional(),
+  assets: assetsSchema,
+  parametric: z.boolean().optional(),
+  basePrice: z.number().min(0).optional(),
+  dimensions: dimensionsSchema,
   allowedMaterials: z.array(objectId).optional(),
   availableColors: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),

@@ -5,13 +5,13 @@ const moduleSchema = new mongoose.Schema(
   {
     name: String,
 
-    slug: String,
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
 
     description: String,
-
-    icon: String,
-
-    modelUrl: String,
 
     type: {
       type: String,

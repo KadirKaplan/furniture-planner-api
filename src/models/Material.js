@@ -22,7 +22,11 @@ const materialSchema = new mongoose.Schema(
   {
     name: String,
 
-    slug: String,
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
 
     type: {
       type: String,
