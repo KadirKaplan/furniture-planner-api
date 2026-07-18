@@ -1,6 +1,6 @@
 const multer = require("multer");
 
-const ICON_MAX_BYTES = 800 * 1024; // 800 KB
+const ICON_MAX_BYTES = 1024 * 1024; // 1 MB
 const MODEL_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
 const ICON_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -23,7 +23,7 @@ const iconUpload = multer({
   fileFilter: (req, file, cb) => {
     const ext = extensionOf(file.originalname);
     if (!ICON_MIME_TYPES.includes(file.mimetype) || !ICON_EXTENSIONS.includes(ext)) {
-      return cb(uploadError("Sadece PNG, JPG/JPEG veya WebP formatında ikon yükleyebilirsiniz"));
+      return cb(uploadError("Sadece PNG, JPG/JPEG  formatında ikon yükleyebilirsiniz"));
     }
     cb(null, true);
   },

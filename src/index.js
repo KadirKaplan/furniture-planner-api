@@ -20,6 +20,7 @@ const moduleRoutes = require("./routes/modules");
 //const projectRoutes = require("./routes/projects");
 const pricingRoutes = require("./routes/pricing");
 const uploadRoutes = require("./routes/upload");
+const settingRoutes = require("./routes/settings");
 const app = express();
 
 // Mongo Connection
@@ -92,6 +93,8 @@ app.use("/api/modules", moduleRoutes);
 app.use("/api/pricing", pricingRoutes);
 
 app.use("/api/upload", uploadRoutes);
+
+app.use("/api/settings", settingRoutes);
 
 // 404
 app.use("*", (req, res) => {

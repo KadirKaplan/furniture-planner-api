@@ -64,8 +64,7 @@ exports.uploadModel = asyncHandler(async (req, res) => {
     );
   }
 
-  const isDoor = req.body.type === "door";
-  const key = isDoor ? `models/doors/${slug}.glb` : `models/${slug}.glb`;
+  const key = `models/${slug}.glb`;
 
   await putObject(key, req.file.buffer, "model/gltf-binary");
 

@@ -7,7 +7,9 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/seed/seed.js",
-    "create-admin": "node src/seed/createAdmin.js"
+    "create-admin": "node src/seed/createAdmin.js",
+    "migrate-module-assets": "node src/seed/migrateModuleAssets.js",
+    "migrate-door-submodules": "node src/seed/migrateDoorSubmodules.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1086.0",

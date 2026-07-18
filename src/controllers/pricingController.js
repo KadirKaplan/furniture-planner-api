@@ -1,6 +1,7 @@
 const Product = require("../models/Product");
 const Material = require("../models/Material");
 const FurnitureModule = require("../models/FurnitureModule");
+const Setting = require("../models/Setting");
 const ApiResponse = require("../utils/apiResponse");
 
 /**
@@ -118,10 +119,16 @@ const calculatePrice = async (req, res) => {
     }
   }
 
-  // Modüller (çekmece vb.): { moduleId, quantity }[] — her modül kendi priceModifier'ı
-  // × adet kadar toplama sabit bir ek ücret olarak eklenir (alan/malzeme çarpanlarından
-  // etkilenmez), böylece her çekmece eklendiğinde fiyat o çekmece modülünün birim
-  // fiyatı kadar artar.
+  // Modüller (çekmece vb.): { moduleId, submoduleId?, quantity }[] — her modül kendi
+  // priceModifier'ı × adet kadar toplama sabit bir ek ücret olarak eklenir (alan/malzeme
+  // çarpanlarından etkilenmez), böylece her çekmece eklendiğinde fiyat o çekmece modülünün
+  // birim fiyatı kadar artar.
+  //
+  // submoduleId verilmişse (ör. kapak stili): o satırın birim fiyatı, modülün kendi
+  // priceModifier'ı YERİNE alt modülün priceModifier'ı olur — yani ana modülün taban
+  // fiyatı (ör. Kapak: 450₺, ayrı bir satırla quantity=toplam kapı sayısı gönderilir)
+  // ile seçilen stilin farkı (ör. Rustik Kapak: +150₺) birbirinden bağımsız iki satır
+  // olarak toplanır (additive), biri diğerinin yerine geçmez.
   let modulesTotal = 0;
   const appliedModules = [];
 
@@ -137,6 +144,16 @@ const calculatePrice = async (req, res) => {
     });
     const moduleById = new Map(foundModules.map((m) => [m._id.toString(), m]));
 
+    // Hangi modül (slug) hangi ürün kategorisinde kullanılabilir kuralı artık kod içinde
+    // sabit tutulmuyor — DB'deki "moduleCategoryRules" Setting kaydından okunur (admin
+    // CMS üzerinden bu kuralı değiştiremez, bkz. models/Setting.js).
+    const moduleRulesSetting = await Setting.findOne({ key: "moduleCategoryRules" });
+    const moduleCategoryRules = moduleRulesSetting?.value ?? {};
+    const isModuleAllowedForCategory = (moduleSlug, categorySlug) => {
+      if (!moduleSlug || !categorySlug) return true;
+      return (moduleCategoryRules[categorySlug] ?? []).includes(moduleSlug);
+    };
+
     for (const entry of modules) {
       const quantity = Number(entry?.quantity) || 0;
       if (quantity <= 0) continue;
@@ -146,14 +163,40 @@ const calculatePrice = async (req, res) => {
         return ApiResponse.error(res, "Geçersiz modül", 400);
       }
 
-      const lineTotal = mod.priceModifier * quantity;
+      // "Kapak" modülü slug'a göre değil, alt modülü (kapak stili) olup olmamasına göre
+      // tanınır — admin CMS'te modüle istediği ismi/slug'ı verebilir, o yüzden kural
+      // eşleşmesinde gerçek slug yerine sabit "door" anahtarı kullanılır.
+      const moduleKind = (mod.submodules?.length ?? 0) > 0 ? "door" : mod.slug;
+      if (!isModuleAllowedForCategory(moduleKind, product.category?.slug)) {
+        return ApiResponse.error(
+          res,
+          `"${mod.name}" modülü bu ürün kategorisi için geçerli değil`,
+          400
+        );
+      }
+
+      let unitPrice = mod.priceModifier;
+      let name = mod.name;
+      let slug = mod.slug;
+
+      if (entry?.submoduleId) {
+        const submodule = mod.submodules?.id(entry.submoduleId);
+        if (!submodule || !submodule.isActive) {
+          return ApiResponse.error(res, "Geçersiz alt modül", 400);
+        }
+        unitPrice = submodule.priceModifier;
+        name = `${mod.name} — ${submodule.name}`;
+        slug = submodule.slug;
+      }
+
+      const lineTotal = unitPrice * quantity;
       modulesTotal += lineTotal;
       appliedModules.push({
         id: mod._id,
-        name: mod.name,
-        slug: mod.slug,
+        name,
+        slug,
         quantity,
-        unitPrice: mod.priceModifier,
+        unitPrice,
         lineTotal,
       });
     }

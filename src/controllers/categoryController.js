@@ -3,8 +3,14 @@ const ApiResponse = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 exports.getCategories = asyncHandler(async (req, res) => {
+  const query = {};
+
+  if (req.query.all !== "true") {
+    query.isActive = true;
+  }
+
   const categories = await Category
-    .find({ isActive: true })
+    .find(query)
     .sort("order");
 
   return ApiResponse.success(

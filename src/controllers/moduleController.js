@@ -3,7 +3,8 @@ const ApiResponse = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 exports.getModules = asyncHandler(async (req, res) => {
-  const query = { isActive: true };
+  const query = {};
+  if (req.query.all !== "true") query.isActive = true;
   if (req.query.slug) query.slug = req.query.slug;
 
   const modules = await FurnitureModule.find(query).sort("name");

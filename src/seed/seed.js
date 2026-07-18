@@ -8,6 +8,7 @@ const Category = require("../models/Category");
 const Material = require("../models/Material");
 const Product = require("../models/Product");
 const FurnitureModule = require("../models/FurnitureModule");
+const Setting = require("../models/Setting");
 const mdfLamDecors = require("./mdfLamDecors");
 const ralColors = require("./ralColors");
 
@@ -21,6 +22,7 @@ const seed = async () => {
     await Material.deleteMany({});
     await Product.deleteMany({});
     await FurnitureModule.deleteMany({});
+    await Setting.deleteMany({ key: "moduleCategoryRules" });
 
     /*
      * CATEGORIES
@@ -99,7 +101,7 @@ const seed = async () => {
 
         description: "Melamin kaplı MDF",
 
-        priceModifier: 12000,
+        priceModifier: 0,
 
         colors: mdfLamDecors,
       },
@@ -113,127 +115,12 @@ const seed = async () => {
 
         description: "Lake boyalı MDF",
 
-        priceModifier: 18000,
+        priceModifier: 0,
 
         colors: ralColors,
       },
 
-      {
-        name: "Cam",
 
-        slug: "cam",
-
-        type: "glass",
-
-        description: "Dolap ve vitrin camları",
-
-        priceModifier: 500,
-
-        colors: [
-          {
-            name: "Şeffaf",
-            hex: "#E8F5FF",
-          },
-
-          {
-            name: "Füme",
-            hex: "#6E6E6E",
-          },
-
-          {
-            name: "Bronz",
-            hex: "#8C6239",
-          },
-        ],
-      },
-
-      {
-        name: "Metal",
-
-        slug: "metal",
-
-        type: "metal",
-
-        description: "Metal profil ve ayak sistemleri",
-
-        priceModifier: 300,
-
-        colors: [
-          {
-            name: "Siyah",
-            hex: "#1C1C1C",
-          },
-
-          {
-            name: "Beyaz",
-            hex: "#F2F2F2",
-          },
-
-          {
-            name: "Gold",
-            hex: "#D4AF37",
-            priceModifier: 250,
-          },
-        ],
-      },
-      {
-        name: "Supramat",
-
-        slug: "supramat",
-
-        type: "supramat",
-
-        description: "Supramat kaplamalı MDF",
-
-        priceModifier: 300,
-
-        colors: [
-          {
-            name: "Siyah",
-            hex: "#1C1C1C",
-          },
-
-          {
-            name: "Beyaz",
-            hex: "#F2F2F2",
-          },
-
-          {
-            name: "Gold",
-            hex: "#D4AF37",
-            priceModifier: 250,
-          },
-        ],
-      },
-      {
-        name: "Akrilik",
-
-        slug: "akrilik",
-
-        type: "akrilik",
-
-        description: "Akrilik kaplamalı MDF",
-
-        priceModifier: 300,
-
-        colors: [
-          {
-            name: "Siyah",
-            hex: "#1C1C1C",
-          },
-
-          {
-            name: "Beyaz",
-            hex: "#F2F2F2",
-          },
-
-          {
-            name: "Gold",
-            hex: "#D4AF37",
-            priceModifier: 250,
-          },
-        ],
-      },
     ]);
 
     console.log(
@@ -250,12 +137,19 @@ const seed = async () => {
      * MODULES
      */
 
+    // Statik modül seti: sadece bu dördü otomatik/seed ile oluşturulur (door/drawer/shelf/mattress).
+    // Admin CMS'ten sadece priceModifier + isActive günceller; isCustom true olan (yalnızca "door")
+    // dışında diğer alanlara (name/slug/description/assets/swatch/submodules) müdahale edemez.
+    // isCustom true olan modülde alt modül (kapak stili) ekleyip özelleştirebilir — submodules
+    // kasıtlı boş bırakıldı, kapak stilleri CMS'ten "Alt Modül Ekle" ile elle eklenecek.
     const modules = await FurnitureModule.insertMany([
       {
         name: "Kapak",
         slug: "door",
         description: "Açılır dolap kapağı",
         priceModifier: 450,
+        isCustom: true,
+        submodules: [],
       },
 
       {
@@ -263,6 +157,8 @@ const seed = async () => {
         slug: "drawer",
         description: "Raylı çekmece sistemi",
         priceModifier: 700,
+        isCustom: false,
+        submodules: [],
       },
 
       {
@@ -270,20 +166,8 @@ const seed = async () => {
         slug: "shelf",
         description: "Sabit veya hareketli raf",
         priceModifier: 150,
-      },
-
-      {
-        name: "Askılık",
-        slug: "hanger",
-        description: "Kıyafet askı borusu",
-        priceModifier: 120,
-      },
-
-      {
-        name: "Ayna",
-        slug: "mirror",
-        description: "Kapak aynası",
-        priceModifier: 900,
+        isCustom: false,
+        submodules: [],
       },
 
       {
@@ -291,6 +175,8 @@ const seed = async () => {
         slug: "mattress",
         description: "Karyola iç ölçüsünden otomatik hesaplanan yatak boyutu",
         priceModifier: 0,
+        isCustom: false,
+        submodules: [],
       },
     ]);
 
@@ -299,364 +185,386 @@ const seed = async () => {
     );
 
     /*
+     * SETTINGS
+     */
+
+    // Hangi modül (slug) hangi ürün kategorisinde (slug) kullanılabilir — admin CMS'ten
+    // müdahale edemez, tek doğruluk kaynağı bu DB kaydı (API ve CMS buradan beslenir).
+    // Değiştirmek için doğrudan DB'ye (seed veya migration script ile) müdahale edilir.
+    await Setting.create({
+      key: "moduleCategoryRules",
+      value: {
+        dolap: ["door", "drawer", "shelf"],
+        karyola: ["mattress"],
+        "tv-unitesi": ["door", "drawer", "shelf"],
+        komodin: [ "drawer"],
+        masa: ["drawer"],
+        kitaplık: ["shelf"],
+        şifonyer: ["door", "drawer"],
+        "kahve-köşesi": ["door", "shelf"],
+      },
+    });
+
+    console.log("✅ moduleCategoryRules ayarı oluşturuldu");
+
+    /*
      * PRODUCTS
      */
 
-    const products = await Product.insertMany([
-      {
-        name: "Modüler Dolap",
+    // const products = await Product.insertMany([
+    //   {
+    //     name: "Modüler Dolap",
 
-        slug: "moduler-dolap",
+    //     slug: "moduler-dolap",
 
-        category: categories[0]._id,
+    //     category: categories[0]._id,
 
-        description:
-          "Parametrik gardırop sistemi",
+    //     description:
+    //       "Parametrik gardırop sistemi",
 
-        assets: {
-          icon: "https://cdn.eycestudio.com/icons/moduler-dolap.png",
-          modelUrl: "https://cdn.eycestudio.com/models/moduler-dolap.glb",
-        },
+    //     assets: {
+    //       icon: "https://cdn.eycestudio.com/icons/moduler-dolap.png",
+    //       modelUrl: "https://cdn.eycestudio.com/models/moduler-dolap.glb",
+    //     },
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 12000,
+    //     basePrice: 12000,
 
-        dimensions: {
-          defaultWidth: 100,
-          defaultHeight: 200,
-          defaultDepth: 58,
+    //     dimensions: {
+    //       defaultWidth: 100,
+    //       defaultHeight: 200,
+    //       defaultDepth: 58,
 
-          minWidth: 40,
-          maxWidth: 300,
+    //       minWidth: 40,
+    //       maxWidth: 300,
 
-          minHeight: 60,
-          maxHeight: 300,
+    //       minHeight: 60,
+    //       maxHeight: 300,
 
-          minDepth: 30,
-          maxDepth: 80,
-        },
+    //       minDepth: 30,
+    //       maxDepth: 80,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "Karyola",
+    //   {
+    //     name: "Karyola",
 
-        slug: "karyola",
+    //     slug: "karyola",
 
-        category: categories[1]._id,
+    //     category: categories[1]._id,
 
-        description: "120x200 karyola",
+    //     description: "120x200 karyola",
 
-        assets: {
-          icon: "https://cdn.eycestudio.com/icons/karyola.png",
-          modelUrl: "https://cdn.eycestudio.com/models/karyola.glb",
-        },
+    //     assets: {
+    //       icon: "https://cdn.eycestudio.com/icons/karyola.png",
+    //       modelUrl: "https://cdn.eycestudio.com/models/karyola.glb",
+    //     },
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 21500,
+    //     basePrice: 21500,
 
-        dimensions: {
-          defaultWidth: 120,
-          defaultHeight: 110,
-          defaultDepth: 200,
+    //     dimensions: {
+    //       defaultWidth: 120,
+    //       defaultHeight: 110,
+    //       defaultDepth: 200,
 
-          minWidth: 80,
-          maxWidth: 200,
+    //       minWidth: 80,
+    //       maxWidth: 200,
 
-          minHeight: 100,
-          maxHeight: 120,
+    //       minHeight: 100,
+    //       maxHeight: 120,
 
-          minDepth: 180,
-          maxDepth: 200,
-        },
+    //       minDepth: 180,
+    //       maxDepth: 200,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "TV Ünitesi",
+    //   {
+    //     name: "TV Ünitesi",
 
-        slug: "tv-unitesi",
+    //     slug: "tv-unitesi",
 
-        category: categories[2]._id,
+    //     category: categories[2]._id,
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 0,
+    //     basePrice: 0,
 
-        dimensions: {
-          defaultWidth: 180,
-          defaultHeight: 50,
-          defaultDepth: 40,
+    //     dimensions: {
+    //       defaultWidth: 180,
+    //       defaultHeight: 50,
+    //       defaultDepth: 40,
 
-          minWidth: 100,
-          maxWidth: 400,
+    //       minWidth: 100,
+    //       maxWidth: 400,
 
-          minHeight: 30,
-          maxHeight: 120,
+    //       minHeight: 30,
+    //       maxHeight: 120,
 
-          minDepth: 30,
-          maxDepth: 60,
-        },
+    //       minDepth: 30,
+    //       maxDepth: 60,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "İki Çekmeceli Komodin",
+    //   {
+    //     name: "İki Çekmeceli Komodin",
 
-        slug: "2-komodin",
+    //     slug: "2-komodin",
 
-        category: categories[3]._id,
+    //     category: categories[3]._id,
 
-        assets: {
-          icon: "https://cdn.eycestudio.com/icons/2-komodin.png",
-          modelUrl: "https://cdn.eycestudio.com/models/2-komodin.glb",
-        },
+    //     assets: {
+    //       icon: "https://cdn.eycestudio.com/icons/2-komodin.png",
+    //       modelUrl: "https://cdn.eycestudio.com/models/2-komodin.glb",
+    //     },
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 10000,
+    //     basePrice: 10000,
 
-        dimensions: {
-          defaultWidth: 60,
-          defaultHeight: 70,
-          defaultDepth: 40,
+    //     dimensions: {
+    //       defaultWidth: 60,
+    //       defaultHeight: 70,
+    //       defaultDepth: 40,
 
-          minWidth: 40,
-          maxWidth: 80,
+    //       minWidth: 40,
+    //       maxWidth: 80,
 
-          minHeight: 40,
-          maxHeight: 80,
+    //       minHeight: 40,
+    //       maxHeight: 80,
 
-          minDepth: 35,
-          maxDepth: 60,
-        },
+    //       minDepth: 35,
+    //       maxDepth: 60,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "Çalışma Masası",
+    //   {
+    //     name: "Çalışma Masası",
 
-        slug: "calisma-masasi",
+    //     slug: "calisma-masasi",
 
-        category: categories[4]._id,
+    //     category: categories[4]._id,
 
-        description: "Çalışma ve yemek masası",
+    //     description: "Çalışma ve yemek masası",
 
-        assets: {
-          icon: "https://pub-a3ce010822b64aaaaea5e17cb19ef77b.r2.dev/icons/calisma-masasi.png",
-          modelUrl: "https://pub-a3ce010822b64aaaaea5e17cb19ef77b.r2.dev/models/calisma-masasi.glb",
-        },
+    //     assets: {
+    //       icon: "https://pub-a3ce010822b64aaaaea5e17cb19ef77b.r2.dev/icons/calisma-masasi.png",
+    //       modelUrl: "https://pub-a3ce010822b64aaaaea5e17cb19ef77b.r2.dev/models/calisma-masasi.glb",
+    //     },
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 0,
+    //     basePrice: 0,
 
-        dimensions: {
-          defaultWidth: 120,
-          defaultHeight: 75,
-          defaultDepth: 60,
+    //     dimensions: {
+    //       defaultWidth: 120,
+    //       defaultHeight: 75,
+    //       defaultDepth: 60,
 
-          minWidth: 80,
-          maxWidth: 200,
+    //       minWidth: 80,
+    //       maxWidth: 200,
 
-          minHeight: 70,
-          maxHeight: 80,
+    //       minHeight: 70,
+    //       maxHeight: 80,
 
-          minDepth: 50,
-          maxDepth: 90,
-        },
+    //       minDepth: 50,
+    //       maxDepth: 90,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "Kitaplık",
+    //   {
+    //     name: "Kitaplık",
 
-        slug: "kitaplik",
+    //     slug: "kitaplik",
 
-        category: categories[5]._id,
+    //     category: categories[5]._id,
 
-        description: "Açık raflı kitaplık",
+    //     description: "Açık raflı kitaplık",
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 0,
+    //     basePrice: 0,
 
-        dimensions: {
-          defaultWidth: 90,
-          defaultHeight: 180,
-          defaultDepth: 30,
+    //     dimensions: {
+    //       defaultWidth: 90,
+    //       defaultHeight: 180,
+    //       defaultDepth: 30,
 
-          minWidth: 60,
-          maxWidth: 200,
+    //       minWidth: 60,
+    //       maxWidth: 200,
 
-          minHeight: 100,
-          maxHeight: 240,
+    //       minHeight: 100,
+    //       maxHeight: 240,
 
-          minDepth: 25,
-          maxDepth: 40,
-        },
+    //       minDepth: 25,
+    //       maxDepth: 40,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "Şifonyer",
+    //   {
+    //     name: "Şifonyer",
 
-        slug: "sifonyer",
+    //     slug: "sifonyer",
 
-        category: categories[6]._id,
+    //     category: categories[6]._id,
 
-        description: "Çok çekmeceli şifonyer",
+    //     description: "Çok çekmeceli şifonyer",
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 0,
+    //     basePrice: 0,
 
-        dimensions: {
-          defaultWidth: 100,
-          defaultHeight: 90,
-          defaultDepth: 45,
+    //     dimensions: {
+    //       defaultWidth: 100,
+    //       defaultHeight: 90,
+    //       defaultDepth: 45,
 
-          minWidth: 60,
-          maxWidth: 160,
+    //       minWidth: 60,
+    //       maxWidth: 160,
 
-          minHeight: 70,
-          maxHeight: 110,
+    //       minHeight: 70,
+    //       maxHeight: 110,
 
-          minDepth: 40,
-          maxDepth: 55,
-        },
+    //       minDepth: 40,
+    //       maxDepth: 55,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
+    //     isActive: true,
+    //   },
 
-      {
-        name: "Kahve Köşesi",
+    //   {
+    //     name: "Kahve Köşesi",
 
-        slug: "kahve-kosesi",
+    //     slug: "kahve-kosesi",
 
-        category: categories[7]._id,
+    //     category: categories[7]._id,
 
-        description: "Kahve köşesi ünitesi",
+    //     description: "Kahve köşesi ünitesi",
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 0,
+    //     basePrice: 0,
 
-        // NOT: dimensions şu an 0/0/0 ve isActive false — üründe henüz ikon/model
-        // yüklenmemiş (CDN'de dosya yok), CMS üzerinden canlıda bu şekilde yarım
-        // bırakılmış durumda. Seed, canlı DB'nin mevcut halini birebir yansıtıyor;
-        // tamamlanınca burası da güncellenmeli.
-        dimensions: {
-          defaultWidth: 0,
-          defaultHeight: 0,
-          defaultDepth: 0,
+    //     // NOT: dimensions şu an 0/0/0 ve isActive false — üründe henüz ikon/model
+    //     // yüklenmemiş (CDN'de dosya yok), CMS üzerinden canlıda bu şekilde yarım
+    //     // bırakılmış durumda. Seed, canlı DB'nin mevcut halini birebir yansıtıyor;
+    //     // tamamlanınca burası da güncellenmeli.
+    //     dimensions: {
+    //       defaultWidth: 0,
+    //       defaultHeight: 0,
+    //       defaultDepth: 0,
 
-          minWidth: 50,
-          maxWidth: 120,
+    //       minWidth: 50,
+    //       maxWidth: 120,
 
-          minHeight: 70,
-          maxHeight: 110,
+    //       minHeight: 70,
+    //       maxHeight: 110,
 
-          minDepth: 30,
-          maxDepth: 50,
-        },
+    //       minDepth: 30,
+    //       maxDepth: 50,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: false,
-      },
+    //     isActive: false,
+    //   },
 
-      {
-        name: "Tek Kapaklı Komodin",
+    //   {
+    //     name: "Tek Kapaklı Komodin",
 
-        slug: "tek-kapakli",
+    //     slug: "tek-kapakli",
 
-        category: categories[3]._id,
+    //     category: categories[3]._id,
 
-        description: "",
+    //     description: "",
 
-        assets: {
-          icon: "https://cdn.eycestudio.com/icons/tek-kapakli.png",
-          modelUrl: "https://cdn.eycestudio.com/models/tek-kapakli.glb",
-        },
+    //     assets: {
+    //       icon: "https://cdn.eycestudio.com/icons/tek-kapakli.png",
+    //       modelUrl: "https://cdn.eycestudio.com/models/tek-kapakli.glb",
+    //     },
 
-        parametric: true,
+    //     parametric: true,
 
-        basePrice: 6500,
+    //     basePrice: 6500,
 
-        dimensions: {
-          defaultWidth: 15,
-          defaultHeight: 30,
-          defaultDepth: 50,
+    //     dimensions: {
+    //       defaultWidth: 15,
+    //       defaultHeight: 30,
+    //       defaultDepth: 50,
 
-          minWidth: 10,
-          maxWidth: 20,
+    //       minWidth: 10,
+    //       maxWidth: 20,
 
-          minHeight: 20,
-          maxHeight: 40,
+    //       minHeight: 20,
+    //       maxHeight: 40,
 
-          minDepth: 40,
-          maxDepth: 60,
-        },
+    //       minDepth: 40,
+    //       maxDepth: 60,
+    //     },
 
-        allowedMaterials: [
-          matBySlug["mdf-lam"],
-          matBySlug["mdf-lake"],
-        ],
+    //     allowedMaterials: [
+    //       matBySlug["mdf-lam"],
+    //       matBySlug["mdf-lake"],
+    //     ],
 
-        isActive: true,
-      },
-    ]);
+    //     isActive: true,
+    //   },
+    // ]);
 
-    console.log(
-      `✅ ${products.length} ürün oluşturuldu`
-    );
+    // NOT: PRODUCTS bloğu şu an yorumda (bir sonraki adımda ele alınacak) — bu yüzden
+    // ürün sayısı loglanmıyor, "products tanımsız" hatasıyla script'in çökmesi engellendi.
 
     console.log("\n🎉 Seed tamamlandı");
 
