@@ -27,6 +27,8 @@ const productCreateSchema = z.object({
   parametric: z.boolean().optional(),
   basePrice: z.number().min(0).optional(),
   dimensions: dimensionsSchema,
+  // Tek kapağın maksimum genişliği (cm) — null/boş ise ürün kapak desteklemez
+  maxDoorWidth: z.number().positive("maxDoorWidth 0'dan büyük olmalıdır").nullable().optional(),
   allowedMaterials: z.array(objectId).optional(),
   availableColors: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),

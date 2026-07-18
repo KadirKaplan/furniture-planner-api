@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const applyIdTransform = require("../utils/idTransform");
+const { MODULE_TYPES } = require("../config/moduleTypes");
 
 // Ana modülün varyantları — ör. "Kapak" modülünün altına Düz/Kare/Rustik kapak stilleri
 // birer alt modül olarak eklenir (CMS'te "Alt Modül Ekle" ile yönetilir). Her alt modül
@@ -56,6 +57,15 @@ const moduleSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+    },
+
+    // DAVRANIŞ tipi — FE'nin 3D/etkileşim mantığı ve kategori kuralları slug'a değil
+    // buna göre eşleşir (bkz. config/moduleTypes.js). Slug yalnızca kimlik/URL amaçlıdır.
+    type: {
+      type: String,
+      enum: MODULE_TYPES,
+      required: true,
+      default: "generic",
     },
 
     description: String,

@@ -48,6 +48,16 @@ const productSchema = new mongoose.Schema(
       maxDepth: Number,
     },
 
+    // Tek kapağın alabileceği maksimum genişlik (cm). Dolu ise ürün kapak destekler:
+    // FE kapak sayısını ceil(genişlik / maxDoorWidth) ile hesaplar ve ürünü parametrik
+    // (WardrobeMesh) yolda çizerek kapak slotu/stil atamasını açar. Boş (null) ise
+    // üründe kapak sistemi yoktur. Eskiden FE'de product.slug === "moduler-dolap"
+    // hardcode'uydu — artık ürün başına CMS'ten yönetilir.
+    maxDoorWidth: {
+      type: Number,
+      default: null,
+    },
+
     allowedMaterials: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -9,6 +9,7 @@ const Material = require("../models/Material");
 const Product = require("../models/Product");
 const FurnitureModule = require("../models/FurnitureModule");
 const Setting = require("../models/Setting");
+const { MODULE_TYPES } = require("../config/moduleTypes");
 const mdfLamDecors = require("./mdfLamDecors");
 const ralColors = require("./ralColors");
 
@@ -137,15 +138,17 @@ const seed = async () => {
      * MODULES
      */
 
-    // Statik modül seti: sadece bu dördü otomatik/seed ile oluşturulur (door/drawer/shelf/mattress).
-    // Admin CMS'ten sadece priceModifier + isActive günceller; isCustom true olan (yalnızca "door")
-    // dışında diğer alanlara (name/slug/description/assets/swatch/submodules) müdahale edemez.
-    // isCustom true olan modülde alt modül (kapak stili) ekleyip özelleştirebilir — submodules
-    // kasıtlı boş bırakıldı, kapak stilleri CMS'ten "Alt Modül Ekle" ile elle eklenecek.
+    // Temel modül seti. `type` DAVRANIŞ enum'udur (bkz. config/moduleTypes.js): FE'nin
+    // 3D/etkileşim mantığı ve kategori kuralları slug'a değil type'a göre eşleşir —
+    // admin CMS'ten yeni modül oluşturabilir (isim/slug serbest, type dropdown'dan
+    // seçilir; öngörülmeyen eklentiler için "generic" tipi vardır). isCustom true olan
+    // modülde alt modül (kapak stili) ekleyip özelleştirebilir — submodules kasıtlı boş
+    // bırakıldı, kapak stilleri CMS'ten "Alt Modül Ekle" ile elle eklenecek.
     const modules = await FurnitureModule.insertMany([
       {
         name: "Kapak",
         slug: "door",
+        type: "door",
         description: "Açılır dolap kapağı",
         priceModifier: 450,
         isCustom: true,
@@ -155,6 +158,7 @@ const seed = async () => {
       {
         name: "Çekmece",
         slug: "drawer",
+        type: "drawer",
         description: "Raylı çekmece sistemi",
         priceModifier: 700,
         isCustom: false,
@@ -164,6 +168,7 @@ const seed = async () => {
       {
         name: "Raf",
         slug: "shelf",
+        type: "shelf",
         description: "Sabit veya hareketli raf",
         priceModifier: 150,
         isCustom: false,
@@ -173,6 +178,7 @@ const seed = async () => {
       {
         name: "Yatak",
         slug: "mattress",
+        type: "mattress",
         description: "Karyola iç ölçüsünden otomatik hesaplanan yatak boyutu",
         priceModifier: 0,
         isCustom: false,
@@ -188,21 +194,38 @@ const seed = async () => {
      * SETTINGS
      */
 
-    // Hangi modül (slug) hangi ürün kategorisinde (slug) kullanılabilir — admin CMS'ten
-    // müdahale edemez, tek doğruluk kaynağı bu DB kaydı (API ve CMS buradan beslenir).
-    // Değiştirmek için doğrudan DB'ye (seed veya migration script ile) müdahale edilir.
+    // Hangi modül TİPİ (config/moduleTypes.js enum'u) hangi ürün kategorisinde (slug)
+    // kullanılabilir — API pricing ve FE buradan beslenir; CMS'teki "Modül Kuralları"
+    // matris ekranından yönetilir (iki eksen de kapalı küme olduğu için typo imkânsız).
+    const moduleCategoryRules = {
+      dolap: ["door", "drawer", "shelf"],
+      karyola: ["mattress"],
+      "tv-unitesi": ["door", "drawer", "shelf"],
+      komodin: ["door", "drawer"],
+      masa: ["drawer"],
+      kitaplık: ["shelf"],
+      şifonyer: ["door", "drawer"],
+      "kahve-köşesi": ["door", "shelf"],
+    };
+
+    // Kural setini seed anında doğrula — anahtarlar az önce oluşturulan kategori
+    // slug'ları, değerler MODULE_TYPES enum'undan olmalı (settingController'daki
+    // PUT doğrulamasının seed karşılığı; typo sessizce DB'ye sızamaz).
+    const categorySlugs = new Set(categories.map((c) => c.slug));
+    for (const [catSlug, types] of Object.entries(moduleCategoryRules)) {
+      if (!categorySlugs.has(catSlug)) {
+        throw new Error(`moduleCategoryRules: bilinmeyen kategori slug'ı "${catSlug}"`);
+      }
+      for (const t of types) {
+        if (!MODULE_TYPES.includes(t)) {
+          throw new Error(`moduleCategoryRules: geçersiz modül tipi "${t}" (kategori: ${catSlug})`);
+        }
+      }
+    }
+
     await Setting.create({
       key: "moduleCategoryRules",
-      value: {
-        dolap: ["door", "drawer", "shelf"],
-        karyola: ["mattress"],
-        "tv-unitesi": ["door", "drawer", "shelf"],
-        komodin: [ "drawer"],
-        masa: ["drawer"],
-        kitaplık: ["shelf"],
-        şifonyer: ["door", "drawer"],
-        "kahve-köşesi": ["door", "shelf"],
-      },
+      value: moduleCategoryRules,
     });
 
     console.log("✅ moduleCategoryRules ayarı oluşturuldu");
@@ -230,6 +253,9 @@ const seed = async () => {
     //     parametric: true,
 
     //     basePrice: 12000,
+
+    //     // Tek kapak max 50 cm — kapak sayısı FE'de ceil(genişlik / maxDoorWidth)
+    //     maxDoorWidth: 50,
 
     //     dimensions: {
     //       defaultWidth: 100,
@@ -333,6 +359,9 @@ const seed = async () => {
     //     name: "İki Çekmeceli Komodin",
 
     //     slug: "2-komodin",
+
+    //     // Komodinde de kapak sistemi var (bkz. Product.maxDoorWidth)
+    //     maxDoorWidth: 60,
 
     //     category: categories[3]._id,
 
@@ -538,6 +567,9 @@ const seed = async () => {
     //     parametric: true,
 
     //     basePrice: 6500,
+
+    //     // Komodinde de kapak sistemi var — tek kapak max 60 cm (küçük ürün, tek kapak çıkar)
+    //     maxDoorWidth: 60,
 
     //     dimensions: {
     //       defaultWidth: 15,

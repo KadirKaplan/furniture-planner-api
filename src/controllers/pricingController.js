@@ -144,14 +144,14 @@ const calculatePrice = async (req, res) => {
     });
     const moduleById = new Map(foundModules.map((m) => [m._id.toString(), m]));
 
-    // Hangi modül (slug) hangi ürün kategorisinde kullanılabilir kuralı artık kod içinde
-    // sabit tutulmuyor — DB'deki "moduleCategoryRules" Setting kaydından okunur (admin
-    // CMS üzerinden bu kuralı değiştiremez, bkz. models/Setting.js).
+    // Hangi modül TİPİ hangi ürün kategorisinde kullanılabilir kuralı kod içinde sabit
+    // tutulmuyor — DB'deki "moduleCategoryRules" Setting kaydından okunur (kategori slug
+    // → modül tipi listesi; CMS'teki kural matrisi ekranından yönetilir).
     const moduleRulesSetting = await Setting.findOne({ key: "moduleCategoryRules" });
     const moduleCategoryRules = moduleRulesSetting?.value ?? {};
-    const isModuleAllowedForCategory = (moduleSlug, categorySlug) => {
-      if (!moduleSlug || !categorySlug) return true;
-      return (moduleCategoryRules[categorySlug] ?? []).includes(moduleSlug);
+    const isModuleAllowedForCategory = (moduleType, categorySlug) => {
+      if (!moduleType || !categorySlug) return true;
+      return (moduleCategoryRules[categorySlug] ?? []).includes(moduleType);
     };
 
     for (const entry of modules) {
@@ -163,11 +163,9 @@ const calculatePrice = async (req, res) => {
         return ApiResponse.error(res, "Geçersiz modül", 400);
       }
 
-      // "Kapak" modülü slug'a göre değil, alt modülü (kapak stili) olup olmamasına göre
-      // tanınır — admin CMS'te modüle istediği ismi/slug'ı verebilir, o yüzden kural
-      // eşleşmesinde gerçek slug yerine sabit "door" anahtarı kullanılır.
-      const moduleKind = (mod.submodules?.length ?? 0) > 0 ? "door" : mod.slug;
-      if (!isModuleAllowedForCategory(moduleKind, product.category?.slug)) {
+      // Kural eşleşmesi modülün DAVRANIŞ tipi (type enum) üzerinden yapılır — admin
+      // CMS'te modüle istediği ismi/slug'ı verebilir, davranış sözleşmesini bozamaz.
+      if (!isModuleAllowedForCategory(mod.type, product.category?.slug)) {
         return ApiResponse.error(
           res,
           `"${mod.name}" modülü bu ürün kategorisi için geçerli değil`,
@@ -195,6 +193,7 @@ const calculatePrice = async (req, res) => {
         id: mod._id,
         name,
         slug,
+        type: mod.type,
         quantity,
         unitPrice,
         lineTotal,
