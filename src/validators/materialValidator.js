@@ -16,7 +16,8 @@ const materialCreateSchema = z.object({
     .enum(["mdflam", "mdflake", "glass", "metal", "supramat", "akrilik"])
     .optional(),
   description: z.string().optional(),
-  priceModifier: z.number().optional(),
+  // Materyal seviyesinde priceModifier kaldırıldı — fiyat etkisi ürün başına
+  // Product.materialBasePrices ile yönetilir; zod bilinmeyen alanı zaten ayıklar.
   colors: z.array(colorSchema).optional(),
   isActive: z.boolean().optional(),
 });

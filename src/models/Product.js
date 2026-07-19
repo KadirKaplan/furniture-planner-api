@@ -65,6 +65,26 @@ const productSchema = new mongoose.Schema(
       },
     ],
 
+    // Ürün başına materyal baz fiyatı override'ı. Materyalin fiyat etkisi üründen
+    // ürüne değişir (ör. MDF Lake: modüler dolapta 20.000₺, komodinde 15.000₺ taban
+    // fiyat gerektirir) — global Material.priceModifier yüzdesi bunu ifade edemez.
+    // Seçilen materyal bu listedeyse alan fiyatı product.basePrice yerine buradaki
+    // basePrice ile hesaplanır ve materyalin global yüzde modifier'ı UYGULANMAZ
+    // (fiyat zaten materyale özel girilmiştir). Listede olmayan materyaller için
+    // eski davranış sürer: basePrice × (1 + material.priceModifier / 100).
+    materialBasePrices: [
+      {
+        material: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Material",
+        },
+        basePrice: {
+          type: Number,
+          default: 0,
+        },
+      },
+    ],
+
     availableColors: [String],
 
     isActive: {

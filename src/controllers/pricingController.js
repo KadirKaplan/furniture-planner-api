@@ -14,9 +14,11 @@ const ApiResponse = require("../utils/apiResponse");
  *    depthMultiplier = 1 + depthBrackets × 0.10
  *    Karyolada depth zaten alan fiyatının bir parçası olduğundan bu ek ücret
  *    uygulanmaz (aksi halde aynı boyut hem alanda hem surcharge'da sayılırdı).
- * 3. Malzeme ve renk modifier'ları yüzde artış olarak uygulanır
- *    finalPrice = alanFiyatı × depthMultiplier × (1 + matMod/100) × (1 + colorMod/100)
- *                 + modüllerToplamı
+ * 3. Malzemenin fiyat etkisi ÜRÜN BAŞINA yönetilir (Material'de global modifier yok):
+ *    ürünün materialBasePrices listesinde seçilen materyal için özel taban fiyat
+ *    tanımlıysa alan fiyatı product.basePrice yerine o değerle hesaplanır; tanımlı
+ *    değilse materyalin fiyata etkisi olmaz. Renk modifier'ı yüzde artış olarak uygulanır:
+ *    finalPrice = alanFiyatı × depthMultiplier × (1 + colorMod/100) + modüllerToplamı
  * 4. Modüller (çekmece/kapak/raf vb.) sabit birim fiyatlıdır — alan/derinlik/malzeme
  *    çarpanlarından etkilenmez, her biri kendi priceModifier'ı × adet kadar toplama eklenir.
  */
@@ -71,15 +73,18 @@ const calculatePrice = async (req, res) => {
   const areaSqm = isBed
     ? (effectiveWidth * effectiveDepth) / 10000
     : (effectiveWidth * effectiveHeight) / 10000;
-  let price = (product.basePrice || 0) * areaSqm;
 
   // Derinlik ek ücreti: 60 cm'ye kadar etkisiz, sonrasında her 10 cm dilimi +%10
   // Karyolada derinlik zaten alan fiyatına dahil edildiğinden bu ek ücret uygulanmaz.
   const depthBrackets = !isBed && depth > 60 ? Math.ceil((depth - 60) / 10) : 0;
   const depthMultiplier = 1 + depthBrackets * 0.1;
-  price = price * depthMultiplier;
 
-  let materialModifier = 0;
+  // Materyalin fiyat etkisi ürün başına yönetilir: ürünün materialBasePrices
+  // listesinde seçilen materyal için özel bir taban fiyat varsa alan fiyatı onun
+  // üzerinden hesaplanır (fiyat o ürün+materyal ikilisi için mutlak girilmiştir).
+  // Tanımlı değilse materyalin fiyata etkisi yoktur — Material'de global bir
+  // yüzde modifier alanı artık bulunmaz.
+  let effectiveBasePrice = product.basePrice || 0;
   let colorModifier = 0;
   let appliedMaterial = null;
   let appliedColor = null;
@@ -102,8 +107,20 @@ const calculatePrice = async (req, res) => {
       return ApiResponse.error(res, "Malzeme bulunamadı", 404);
     }
 
-    materialModifier = material.priceModifier || 0;
-    appliedMaterial = { id: material._id, name: material.name, modifier: materialModifier };
+    const baseOverride = (product.materialBasePrices || []).find(
+      (mp) => mp.material?.toString() === materialId && mp.basePrice > 0
+    );
+
+    if (baseOverride) {
+      effectiveBasePrice = baseOverride.basePrice;
+      appliedMaterial = {
+        id: material._id,
+        name: material.name,
+        baseOverride: baseOverride.basePrice,
+      };
+    } else {
+      appliedMaterial = { id: material._id, name: material.name };
+    }
 
     if (colorId) {
       const color = material.colors.find((c) => c._id.toString() === colorId);
@@ -118,6 +135,10 @@ const calculatePrice = async (req, res) => {
       appliedColor = { id: color._id, name: color.name, modifier: colorModifier };
     }
   }
+
+  // Alan fiyatı, materyal çözümlemesinden SONRA hesaplanır — taban fiyat ürün+materyal
+  // ikilisine göre değişebilir (materialBasePrices override'ı).
+  const price = effectiveBasePrice * areaSqm * depthMultiplier;
 
   // Modüller (çekmece vb.): { moduleId, submoduleId?, quantity }[] — her modül kendi
   // priceModifier'ı × adet kadar toplama sabit bir ek ücret olarak eklenir (alan/malzeme
@@ -202,16 +223,17 @@ const calculatePrice = async (req, res) => {
   }
 
   const finalPrice =
-    price * (1 + materialModifier / 100) * (1 + colorModifier / 100) +
-    modulesTotal;
+    price * (1 + colorModifier / 100) + modulesTotal;
 
   return ApiResponse.success(res, {
     product: { id: product._id, name: product.name },
     dimensions: { width, height, depth },
     effectiveDimensions: { width: effectiveWidth, height: effectiveHeight, depth: effectiveDepth },
-    basePrice: product.basePrice,
+    // Materyal override'ı varsa uygulanan taban fiyat ürünkinden farklıdır — burada
+    // hesapta gerçekten kullanılan değer döner.
+    basePrice: effectiveBasePrice,
     areaSqm: Math.round(areaSqm * 10000) / 10000,
-    areaPrice: Math.round((product.basePrice || 0) * areaSqm * 100) / 100,
+    areaPrice: Math.round(effectiveBasePrice * areaSqm * 100) / 100,
     depth: {
       brackets: depthBrackets,
       surchargePercent: depthBrackets * 10,

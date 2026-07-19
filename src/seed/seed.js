@@ -102,8 +102,6 @@ const seed = async () => {
 
         description: "Melamin kaplı MDF",
 
-        priceModifier: 0,
-
         colors: mdfLamDecors,
       },
 
@@ -115,8 +113,6 @@ const seed = async () => {
         type: "mdflake",
 
         description: "Lake boyalı MDF",
-
-        priceModifier: 0,
 
         colors: ralColors,
       },
@@ -138,19 +134,14 @@ const seed = async () => {
      * MODULES
      */
 
-    // Temel modül seti. `type` DAVRANIŞ enum'udur (bkz. config/moduleTypes.js): FE'nin
-    // 3D/etkileşim mantığı ve kategori kuralları slug'a değil type'a göre eşleşir —
-    // admin CMS'ten yeni modül oluşturabilir (isim/slug serbest, type dropdown'dan
-    // seçilir; öngörülmeyen eklentiler için "generic" tipi vardır). isCustom true olan
-    // modülde alt modül (kapak stili) ekleyip özelleştirebilir — submodules kasıtlı boş
-    // bırakıldı, kapak stilleri CMS'ten "Alt Modül Ekle" ile elle eklenecek.
+   
     const modules = await FurnitureModule.insertMany([
       {
         name: "Kapak",
         slug: "door",
         type: "door",
         description: "Açılır dolap kapağı",
-        priceModifier: 450,
+        priceModifier: 0,
         isCustom: true,
         submodules: [],
       },
@@ -160,7 +151,7 @@ const seed = async () => {
         slug: "drawer",
         type: "drawer",
         description: "Raylı çekmece sistemi",
-        priceModifier: 700,
+        priceModifier: 0,
         isCustom: false,
         submodules: [],
       },
@@ -170,7 +161,7 @@ const seed = async () => {
         slug: "shelf",
         type: "shelf",
         description: "Sabit veya hareketli raf",
-        priceModifier: 150,
+        priceModifier: 0,
         isCustom: false,
         submodules: [],
       },
@@ -201,7 +192,7 @@ const seed = async () => {
       dolap: ["door", "drawer", "shelf"],
       karyola: ["mattress"],
       "tv-unitesi": ["door", "drawer", "shelf"],
-      komodin: ["door", "drawer"],
+      komodin: ["door"],
       masa: ["drawer"],
       kitaplık: ["shelf"],
       şifonyer: ["door", "drawer"],
@@ -275,6 +266,14 @@ const seed = async () => {
     //     allowedMaterials: [
     //       matBySlug["mdf-lam"],
     //       matBySlug["mdf-lake"],
+    //     ],
+
+    //     // Materyal seçiminin fiyat etkisi ürün başına: MDF Lake seçilirse taban
+    //     // fiyat basePrice yerine buradaki değerden hesaplanır (bkz. Product model
+    //     // materialBasePrices + pricingController). MDF Lam için girdi yok — onun
+    //     // fiyatı zaten basePrice'ın kendisi.
+    //     materialBasePrices: [
+    //       { material: matBySlug["mdf-lake"], basePrice: 20000 },
     //     ],
 
     //     isActive: true,
@@ -392,6 +391,11 @@ const seed = async () => {
     //     allowedMaterials: [
     //       matBySlug["mdf-lam"],
     //       matBySlug["mdf-lake"],
+    //     ],
+
+    //     // Lake seçilirse komodinin taban fiyatı 15.000₺ olur (Lam = basePrice).
+    //     materialBasePrices: [
+    //       { material: matBySlug["mdf-lake"], basePrice: 15000 },
     //     ],
 
     //     isActive: true,

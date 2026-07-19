@@ -30,7 +30,6 @@ const categories = await Category.insertMany([
       slug: "mese-ahsap",
       type: "wood",
       description: "Doğal meşe, sağlam ve uzun ömürlü",
-      priceModifier: 500,
       colors: [
         { name: "Açık Meşe", hex: "#C8A96E" },
         { name: "Koyu Meşe", hex: "#7B5E3A" },
@@ -42,7 +41,6 @@ const categories = await Category.insertMany([
       slug: "ceviz-ahsap",
       type: "wood",
       description: "Premium ceviz, derin damar deseni",
-      priceModifier: 1200,
       colors: [
         { name: "Doğal Ceviz", hex: "#5C3D1E" },
         { name: "Füme Ceviz", hex: "#3A2A18", priceModifier: 300 },
@@ -53,7 +51,6 @@ const categories = await Category.insertMany([
       slug: "keten-kumas",
       type: "fabric",
       description: "Doğal keten, nefes alır yapı",
-      priceModifier: 0,
       colors: [
         { name: "Krem", hex: "#F5F0E8" },
         { name: "Açık Gri", hex: "#C9C5BC" },
@@ -66,7 +63,6 @@ const categories = await Category.insertMany([
       slug: "kadife-kumas",
       type: "fabric",
       description: "Yumuşak dokulu kadife, lüks görünüm",
-      priceModifier: 800,
       colors: [
         { name: "Zümrüt Yeşili", hex: "#2D6A4F" },
         { name: "Burgundy", hex: "#6B2737" },
@@ -79,7 +75,6 @@ const categories = await Category.insertMany([
       slug: "tam-deri",
       type: "leather",
       description: "İtalyan tam grain deri",
-      priceModifier: 3000,
       colors: [
         { name: "Camel", hex: "#C19A6B" },
         { name: "Siyah", hex: "#1A1A1A" },
@@ -92,7 +87,6 @@ const categories = await Category.insertMany([
       slug: "mat-metal",
       type: "metal",
       description: "Toz boyalı çelik ayaklar",
-      priceModifier: 200,
       colors: [
         { name: "Siyah Mat", hex: "#1C1C1C" },
         { name: "Beyaz Mat", hex: "#F0F0F0" },

@@ -43,10 +43,10 @@ const materialSchema = new mongoose.Schema(
 
     description: String,
 
-    priceModifier: {
-      type: Number,
-      default: 0,
-    },
+    // NOT: materyal seviyesinde priceModifier YOK — materyalin fiyat etkisi üründen
+    // ürüne değiştiği için Product.materialBasePrices ile ürün başına mutlak taban
+    // fiyat olarak yönetilir (bkz. pricingController). Renk seviyesindeki
+    // priceModifier (%) geçerliliğini korur.
 
     colors: [colorSchema],
 
