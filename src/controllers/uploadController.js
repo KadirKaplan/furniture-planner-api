@@ -1,26 +1,9 @@
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const r2Client = require("../config/r2");
 const ApiResponse = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 const { extensionOf } = require("../middleware/upload");
+const { putObject, publicUrlFor } = require("../services/storageService");
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-const publicUrlFor = (key) => {
-  const base = (process.env.R2_CDN_URL || "").replace(/\/+$/, "");
-  return `${base}/${key}`;
-};
-
-const putObject = async (key, body, contentType) => {
-  await r2Client.send(
-    new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    })
-  );
-};
 
 exports.uploadIcon = asyncHandler(async (req, res) => {
   if (!req.file) {

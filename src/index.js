@@ -21,10 +21,26 @@ const moduleRoutes = require("./routes/modules");
 const pricingRoutes = require("./routes/pricing");
 const uploadRoutes = require("./routes/upload");
 const settingRoutes = require("./routes/settings");
+const quoteRequestRoutes = require("./routes/quoteRequests");
 const app = express();
 
 // Mongo Connection
 connectDB();
+
+// Ters proxy (nginx / Cloudflare / PaaS) arkasındaysak req.ip soket adresini değil
+// X-Forwarded-For'u göstermeli — aksi halde TÜM istekler proxy'nin tek IP'sine
+// düşer ve IP başına rate limit ya herkesi tek kovaya toplar ya da hiç çalışmaz.
+//
+// Değer env'den gelir çünkü doğrusu dağıtıma bağlıdır ve "hepsine güven" tehlikelidir:
+// proxy yoksa saldırgan X-Forwarded-For başlığını kendi uydurup her istekte farklı
+// IP'ymiş gibi görünerek limiti tamamen atlar. Bu yüzden varsayılan KAPALI.
+//   TRUST_PROXY=1       → önünde tek proxy var (en yaygın)
+//   TRUST_PROXY=2       → iki katman (ör. CDN + yük dengeleyici)
+//   TRUST_PROXY=false   → doğrudan internete açık
+if (process.env.TRUST_PROXY) {
+  const raw = process.env.TRUST_PROXY;
+  app.set("trust proxy", /^\d+$/.test(raw) ? Number(raw) : raw === "true");
+}
 
 // Middlewares
 app.use(helmet());
@@ -95,6 +111,8 @@ app.use("/api/pricing", pricingRoutes);
 app.use("/api/upload", uploadRoutes);
 
 app.use("/api/settings", settingRoutes);
+
+app.use("/api/quote-requests", quoteRequestRoutes);
 
 // 404
 app.use("*", (req, res) => {
