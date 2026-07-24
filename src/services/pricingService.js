@@ -164,8 +164,15 @@ const computePrice = async (
       options.moduleCategoryRules ??
       (await Setting.findOne({ key: "moduleCategoryRules" }))?.value ??
       {};
+    // FAIL-CLOSED: bu, teklif/fiyat hesabının GERÇEK doğrulama sınırı (bkz. FE'deki
+    // aynı isimli yardımcı — orada kurallar henüz yüklenmemişken bilerek fail-open'dır
+    // çünkü orası yalnızca UI'ı gizler/gösterir ve burası zaten yeniden doğrular).
+    // categorySlug'ın eksik olması normalde olmaz ama ürünün category referansı
+    // silinmiş bir kategoriye işaret ediyorsa (bkz. Category.deleteCategory) populate
+    // null döner ve categorySlug undefined olur — bu durumda "kural yok say, izin ver"
+    // demek, kural matrisini tamamen atlatan bir açık bırakırdı.
     const isModuleAllowedForCategory = (moduleType, categorySlug) => {
-      if (!moduleType || !categorySlug) return true;
+      if (!moduleType || !categorySlug) return false;
       return (moduleCategoryRules[categorySlug] ?? []).includes(moduleType);
     };
 

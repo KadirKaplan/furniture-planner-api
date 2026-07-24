@@ -133,9 +133,14 @@ const priceItems = async (items) => {
  * Türetilmiş alanların güncellenmesi BU FONKSİYONDA tek noktada yapılır — revizyon
  * ekleyen her yer bunu kendi başına yapsaydı biri unutulduğunda liste ekranı eski
  * fiyatı göstermeye devam ederdi ve fark edilmesi zor olurdu.
+ *
+ * precomputedPriced: çağıran taraf priceItems'ı zaten kendi başına çalıştırdıysa
+ * (bkz. createQuoteRequest'teki çift-gönderim kalkanı) sonucu buradan geçirir —
+ * aksi halde aynı items için computePrice (ve loadModuleCategoryRules) gereksiz
+ * yere iki kez çalışır, her satır için çift Mongo sorgusu anlamına gelir.
  */
-const appendRevision = async (quoteRequest, { room, items, design, snapshot, note, createdBy }) => {
-  const priced = await priceItems(items);
+const appendRevision = async (quoteRequest, { room, items, design, snapshot, note, createdBy, precomputedPriced }) => {
+  const priced = precomputedPriced ?? (await priceItems(items));
   if (!priced.ok) return priced;
 
   const version = (quoteRequest.revisions.at(-1)?.version ?? 0) + 1;
@@ -178,6 +183,13 @@ const appendRevision = async (quoteRequest, { room, items, design, snapshot, not
 exports.createQuoteRequest = asyncHandler(async (req, res) => {
   const { customer, room, items, design, snapshot } = req.body;
 
+  // Fiyat kalkan kontrolünden ÖNCE hesaplanır: aşağıdaki karşılaştırma yalnızca
+  // ürün sayısına değil, sunucunun hesapladığı tutara da bakar (bkz. altdaki not).
+  const priced = await priceItems(items);
+  if (!priced.ok) {
+    return ApiResponse.error(res, priced.message, priced.status);
+  }
+
   // Çift gönderim kalkanı. Rate limit saatlik tavanı tutuyor ama asıl sık görülen
   // israf butona iki kez basılması ya da aynı isteğin tekrar oynatılması: her biri
   // ayrı bir Mongo kaydı ve ayrı bir R2 yüklemesi demek.
@@ -187,9 +199,17 @@ exports.createQuoteRequest = asyncHandler(async (req, res) => {
   // ikinci talebi sessizce yutardı ve kaybedilen lead, çöp kayıttan pahalıdır.
   // Telefon bu noktada normalize edilmiş durumda (bkz. validator), yani aynı kişi
   // numarayı farklı yazarak kalkanı atlayamaz.
+  //
+  // itemCount YETMEZ, totalPrice de eşleşmeli: yalnızca ürün sayısına bakılsaydı,
+  // müşteri aynı ürünü GENİŞLETİP (itemCount aynı ama fiyat farklı) tekrar gönderse
+  // bile kalkana takılır, eski (düşük) fiyatlı kayıt "aynı talep" diye dönerdi ve
+  // genişletilmiş tasarım hiç kaydedilmezdi. Tutar da eşleşmiyorsa bu farklı bir
+  // taleptir; yeni kayıt oluşturulmalı.
   const duplicate = await QuoteRequest.findOne({
     "customer.phone": customer.phone,
     createdAt: { $gte: new Date(Date.now() - DUPLICATE_WINDOW_MS) },
+    itemCount: items.length,
+    totalPrice: priced.totalPrice,
   })
     .sort({ createdAt: -1 })
     .select("_id totalPrice currency");
@@ -217,6 +237,7 @@ exports.createQuoteRequest = asyncHandler(async (req, res) => {
     design,
     snapshot,
     createdBy: { kind: "customer", name: customer.fullName },
+    precomputedPriced: priced,
   });
 
   if (!result.ok) {
